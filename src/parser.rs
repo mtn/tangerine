@@ -1,11 +1,48 @@
+use std::collections::HashMap;
+
 use lexer::Token;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ASTNode {
     Abstraction { param: Box<ASTNode>, body: Box<ASTNode> },
     Application { lhs: Box<ASTNode>, rhs: Box<ASTNode> },
     Atom(String),
     Epsilon,
+}
+
+impl ASTNode {
+    pub fn reduce(&self, env: HashMap<String, ASTNode>) -> ASTNode {
+        match self {
+            &ASTNode::Abstraction { param: ref p, body: ref b } => {
+                let mut new = env.clone();
+                if let ASTNode::Atom(ref name) = **p {
+                    if new.contains_key(name) {
+                        new.remove(name);
+                    }
+
+                    if let ASTNode::Application { lhs: ref l, rhs: ref r } = **b {
+                        if r == p && !l.free_in(&**p) {
+                            return l.reduce(new)
+                        }
+                    }
+                } else {
+                    panic!("Incorrectly structured Abstraction");
+                }
+
+                ASTNode::Abstraction { param: p.clone(), body: Box::new(b.reduce(new)) }
+            },
+            _ => ASTNode::Epsilon,
+        }
+    }
+
+    fn free_in(&self, atom: &ASTNode) -> bool {
+        match self {
+            &ASTNode::Abstraction { param: ref p, body: ref b } => {
+                *atom != **p && b.free_in(atom)
+            },
+            _ => false
+        }
+    }
 }
 
 pub struct Parser {
