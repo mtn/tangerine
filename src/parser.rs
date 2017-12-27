@@ -30,18 +30,18 @@ impl Parser {
 
     fn parse_abstraction(&mut self) -> ASTNode {
         self.consume(Token::Lambda);
-        let param  = self.parse_abstraction();
+        let param = self.parse_atom();
         self.consume(Token::Dot);
 
         ASTNode::Abstraction {
             param: Box::new(param),
-            body: Box::new(self.parse_abstraction())
+            body: Box::new(self.parse_expression())
         }
     }
 
     fn parse_application(&mut self) -> ASTNode {
         let mut lexpr = self.parse_bounded().unwrap();
-        while true {
+        loop {
             let rexpr = self.parse_bounded();
             match rexpr {
                 Some(exp) => {
@@ -53,8 +53,6 @@ impl Parser {
                 None => return lexpr
             };
         }
-
-        panic!("parse_application failed to return from loop");
     }
 
     fn parse_expression(&mut self) -> ASTNode {
@@ -85,6 +83,7 @@ impl Parser {
 
     fn parse_atom(&mut self) -> ASTNode {
         if let Token::Atom(ref name) = self.tokens[self.ind] {
+            self.ind += 1;
             return ASTNode::Atom(name.clone())
         }
         panic!("Unexpected token type: Given {:?}, Expected Atom",

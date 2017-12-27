@@ -58,19 +58,7 @@ impl Lexer {
                 }
                 self.advance();
 
-                let mut name = ch.to_string();
-                let input_len = self.input.len();
-                while self.ind < input_len {
-                    let ch = self.input[self.ind];
-                    if !ch.is_alphabetic() {
-                        break;
-                    }
-
-                    name.push(ch);
-                    self.advance();
-                }
-
-                Some(Token::Atom(name))
+                Some(Token::Atom(ch.to_string()))
             }
         }
     }
