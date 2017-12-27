@@ -1,10 +1,10 @@
 use lexer::Token;
 
 #[derive(Debug, PartialEq)]
-enum ASTNode {
+pub enum ASTNode {
     Abstraction { param: Box<ASTNode>, body: Box<ASTNode> },
     Application { lhs: Box<ASTNode>, rhs: Box<ASTNode> },
-    Atom { name: String },
+    Atom(String),
     Epsilon,
 }
 
@@ -28,23 +28,72 @@ impl Parser {
         &self.tokens[self.ind-1]
     }
 
-    fn parseAbstraction(&mut self) -> ASTNode {
-        unimplemented!();
+    fn parse_abstraction(&mut self) -> ASTNode {
+        self.consume(Token::Lambda);
+        let param  = self.parse_abstraction();
+        self.consume(Token::Dot);
+
+        ASTNode::Abstraction {
+            param: Box::new(param),
+            body: Box::new(self.parse_abstraction())
+        }
     }
 
-    fn parseApplication(&mut self) -> ASTNode {
-        unimplemented!();
+    fn parse_application(&mut self) -> ASTNode {
+        let mut lexpr = self.parse_bounded().unwrap();
+        while true {
+            let rexpr = self.parse_bounded();
+            match rexpr {
+                Some(exp) => {
+                    lexpr = ASTNode::Application {
+                        lhs: Box::new(lexpr),
+                        rhs: Box::new(exp)
+                    }
+                },
+                None => return lexpr
+            };
+        }
+
+        panic!("parse_application failed to return from loop");
     }
 
-    fn parseExpression(&mut self) -> ASTNode {
-        unimplemented!();
+    fn parse_expression(&mut self) -> ASTNode {
+        if self.tokens[self.ind] == Token::EOF
+            || self.tokens[self.ind] == Token::RParen {
+            return ASTNode::Epsilon
+        }
+
+        self.parse_application()
     }
 
-    fn parseAtom(&mut self) -> ASTNode {
-        unimplemented!();
+    fn parse_parenthesized_expression(&mut self) -> ASTNode {
+        self.consume(Token::LParen);
+        let expr = self.parse_expression();
+        self.consume(Token::RParen);
+
+        expr
+    }
+
+    fn parse_bounded(&mut self) -> Option<ASTNode> {
+        match self.tokens[self.ind] {
+            Token::Atom(_) => Some(self.parse_atom()),
+            Token::Lambda  => Some(self.parse_abstraction()),
+            Token::LParen  => Some(self.parse_parenthesized_expression()),
+            _              => None,
+        }
+    }
+
+    fn parse_atom(&mut self) -> ASTNode {
+        if let Token::Atom(ref name) = self.tokens[self.ind] {
+            return ASTNode::Atom(name.clone())
+        }
+        panic!("Unexpected token type: Given {:?}, Expected Atom",
+               self.tokens[self.ind]);
     }
 
     pub fn parse(&mut self) -> ASTNode {
-        unimplemented!();
+        let res = self.parse_expression();
+        self.consume(Token::EOF);
+        res
     }
 }
