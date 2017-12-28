@@ -163,7 +163,7 @@ impl Parser {
     }
 }
 
-fn remove_epsilon(mut ast: ASTNode) -> ASTNode {
+pub fn remove_epsilon(mut ast: ASTNode) -> ASTNode {
     ast = if let ASTNode::Application { lhs: _, rhs: ref r } = ast {
         if **r == ASTNode::Epsilon {
             remove_epsilon(*r.clone())
