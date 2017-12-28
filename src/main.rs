@@ -1,7 +1,16 @@
+use std::collections::HashMap;
+use std::env;
+
+use std::io::{self, BufReader};
+use std::io::prelude::*;
+use std::fs::File;
+
+extern crate rustyline;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
+
 mod lexer;
 mod parser;
-
-use std::collections::HashMap;
 
 fn evaluate(expr: String) -> parser::ASTNode {
     let tokens = lexer::Lexer::new(expr).lex();
@@ -23,9 +32,47 @@ fn evaluate(expr: String) -> parser::ASTNode {
     ast
 }
 
+fn run_batch_mode(filename: String) {
+    let f = File::open(filename).unwrap();
+    let f = BufReader::new(f);
+
+    for line in f.lines() {
+        println!("{}", evaluate(line.unwrap()));
+    }
+}
+
+fn run_repl() {
+    let mut rl = Editor::<()>::new();
+    loop {
+        let line = rl.readline(">> ");
+        match line {
+            Ok(inp) => println!("{}", evaluate(inp)),
+            Err(ReadlineError::Interrupted) => {
+                println!("Interrupted, goodbye!");
+                break
+            },
+            Err(ReadlineError::Eof) => {
+                println!("Goodbye!");
+                break
+            },
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break
+            }
+        }
+    }
+}
+
 fn main() {
-    println!("Hello, world!");
-    println!("{}", evaluate(String::from(("(λx.(λx.y x) (λx.z x)) x"))));
+    let args: Vec<String> = env::args().collect();
+    if args.len() == 2 {
+        run_batch_mode(args[1].clone())
+    } else if args.len() == 1 {
+        run_repl()
+    } else {
+        println!("Usage: cargo run [filename]");
+        return
+    }
 }
 
 #[cfg(test)]
