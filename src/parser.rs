@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use lexer::Token;
 
@@ -8,6 +9,22 @@ pub enum ASTNode {
     Application { lhs: Box<ASTNode>, rhs: Box<ASTNode> },
     Atom(String),
     Epsilon,
+}
+
+impl fmt::Display for ASTNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &ASTNode::Abstraction { param: ref p, body: ref b } => {
+                write!(f, "λ{}.{}", p, b)
+
+            },
+            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
+                write!(f, "({} {})", l, r)
+            },
+            &ASTNode::Atom(ref name) => write!(f, "{}", name),
+            &ASTNode::Epsilon => write!(f, "ε"),
+        }
+    }
 }
 
 impl ASTNode {

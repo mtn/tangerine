@@ -25,7 +25,7 @@ fn evaluate(expr: String) -> parser::ASTNode {
 
 fn main() {
     println!("Hello, world!");
-    println!("{:?}", evaluate(String::from(("(λx.(λx.y x) (λx.z x)) x"))));
+    println!("{}", evaluate(String::from(("(λx.(λx.y x) (λx.z x)) x"))));
 }
 
 #[cfg(test)]
