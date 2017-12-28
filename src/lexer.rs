@@ -74,19 +74,3 @@ impl Lexer {
         v
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn test_test() {
-        assert_eq!(1+1, 2);
-    }
-
-    #[test]
-    fn test_equality() {
-        assert_eq!(Token::Lambda, Token::Lambda);
-    }
-}
