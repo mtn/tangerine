@@ -31,7 +31,30 @@ impl ASTNode {
 
                 ASTNode::Abstraction { param: p.clone(), body: Box::new(b.reduce(new)) }
             },
-            _ => ASTNode::Epsilon,
+            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
+                if let ASTNode::Abstraction { param: ref p, body: ref b} = **l {
+                    let mut new = env.clone();
+                    if let ASTNode::Atom(ref name) = **p {
+                        new.insert(name.clone(), *r.clone());
+                        return b.reduce(new)
+                    }
+                    panic!("Incorrectly structured Application");
+                }
+
+                ASTNode::Application {
+                    lhs: Box::new(l.reduce(env.clone())),
+                    rhs: Box::new(r.reduce(env.clone()))
+                }
+            },
+            &ASTNode::Atom (ref name) => {
+                match env.get(name) {
+                    Some(ref node) => (*node).clone(),
+                    None => self.clone(),
+                }
+            },
+            &ASTNode::Epsilon => {
+                (*self).clone()
+            }
         }
     }
 
@@ -39,6 +62,12 @@ impl ASTNode {
         match self {
             &ASTNode::Abstraction { param: ref p, body: ref b } => {
                 *atom != **p && b.free_in(atom)
+            },
+            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
+                l.free_in(atom) || r.free_in(atom)
+            },
+            &ASTNode::Atom (_) => {
+                self == atom
             },
             _ => false
         }
@@ -132,4 +161,35 @@ impl Parser {
         self.consume(Token::EOF);
         res
     }
+}
+
+fn remove_epsilon(mut ast: ASTNode) -> ASTNode {
+    ast = if let ASTNode::Application { lhs: _, rhs: ref r } = ast {
+        if **r == ASTNode::Epsilon {
+            remove_epsilon(*r.clone())
+        } else {
+            ast.clone()
+        }
+    } else {
+        ast
+    };
+
+    ast = match ast {
+        ASTNode::Application {lhs: ref l, rhs: ref r} => {
+            ASTNode::Application {
+                lhs: Box::new(remove_epsilon(*l.clone())),
+                rhs: Box::new(remove_epsilon(*r.clone()))
+            }
+        },
+        _ => ast
+    };
+
+    ast = match ast {
+        ASTNode::Abstraction { param: ref p, body: ref b } => {
+            ASTNode::Abstraction { param: p.clone(), body: Box::new(remove_epsilon(*b.clone())) }
+        },
+        _ => ast
+    };
+
+    ast
 }
