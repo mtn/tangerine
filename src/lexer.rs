@@ -15,7 +15,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(input: String) -> Lexer {
+    pub fn new(input: &str) -> Lexer {
         Lexer {
             input: input.chars().filter(|x| !x.is_whitespace()).collect(),
             ind : 0,
