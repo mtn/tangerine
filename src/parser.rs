@@ -4,19 +4,18 @@ use std::fmt;
 use lexer::Token;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ASTNode {
-    Abstraction { param: Box<ASTNode>, body: Box<ASTNode> },
-    Application { lhs: Box<ASTNode>, rhs: Box<ASTNode> },
-    Atom(String),
+pub enum ASTNode<'a> {
+    Abstraction { param: Box<ASTNode<'a>>, body: Box<ASTNode<'a>> },
+    Application { lhs: Box<ASTNode<'a>>, rhs: Box<ASTNode<'a>> },
+    Atom(&'a str),
     Epsilon,
 }
 
-impl fmt::Display for ASTNode {
+impl<'a> fmt::Display for ASTNode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &ASTNode::Abstraction { param: ref p, body: ref b } => {
                 write!(f, "λ{}.{}", p, b)
-
             },
             &ASTNode::Application { lhs: ref l, rhs: ref r } => {
                 write!(f, "({} {})", l, r)
@@ -27,18 +26,18 @@ impl fmt::Display for ASTNode {
     }
 }
 
-impl ASTNode {
-    pub fn reduce(&self, env: HashMap<String, ASTNode>) -> ASTNode {
+impl<'a> ASTNode <'a> {
+    pub fn reduce(&'a self, env: HashMap<String, &'a Box<ASTNode>>) -> ASTNode {
         match self {
-            &ASTNode::Abstraction { param: ref p, body: ref b } => {
+            &ASTNode::Abstraction { param: p, body: b } => {
                 let mut new = env.clone();
-                if let ASTNode::Atom(ref name) = **p {
+                if let ASTNode::Atom(name) = *p {
                     if new.contains_key(name) {
                         new.remove(name);
                     }
 
-                    if let ASTNode::Application { lhs: ref l, rhs: ref r } = **b {
-                        if r == p && !l.free_in(&**p) {
+                    if let ASTNode::Application { lhs: l, rhs: r } = *b {
+                        if r == p && !l.free_in(&*p) {
                             return l.reduce(new)
                         }
                     }
@@ -51,8 +50,8 @@ impl ASTNode {
             &ASTNode::Application { lhs: ref l, rhs: ref r } => {
                 if let ASTNode::Abstraction { param: ref p, body: ref b} = **l {
                     let mut new = env.clone();
-                    if let ASTNode::Atom(ref name) = **p {
-                        new.insert(name.clone(), *r.clone());
+                    if let ASTNode::Atom(name) = **p {
+                        new.insert(name.to_string(), &*r);
                         return b.reduce(new)
                     }
                     panic!("Incorrectly structured Application");
@@ -63,9 +62,9 @@ impl ASTNode {
                     rhs: Box::new(r.reduce(env.clone()))
                 }
             },
-            &ASTNode::Atom (ref name) => {
+            &ASTNode::Atom (name) => {
                 match env.get(name) {
-                    Some(ref node) => (*node).clone(),
+                    Some(node) => ***node,
                     None => self.clone(),
                 }
             },
@@ -75,12 +74,12 @@ impl ASTNode {
         }
     }
 
-    fn free_in(&self, atom: &ASTNode) -> bool {
+    fn free_in (&'a self, atom: &'a ASTNode) -> bool {
         match self {
-            &ASTNode::Abstraction { param: ref p, body: ref b } => {
-                *atom != **p && b.free_in(atom)
+            &ASTNode::Abstraction { param: p, body: b } => {
+                *atom != *p && b.free_in(atom)
             },
-            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
+            &ASTNode::Application { lhs: l, rhs: r } => {
                 l.free_in(atom) || r.free_in(atom)
             },
             &ASTNode::Atom (_) => {
@@ -167,7 +166,7 @@ impl Parser {
     fn parse_atom(&mut self) -> ASTNode {
         if let Token::Atom(ref name) = self.tokens[self.ind] {
             self.ind += 1;
-            return ASTNode::Atom(name.clone())
+            return ASTNode::Atom(name)
         }
         panic!("Unexpected token type: Given {:?}, Expected Atom",
                self.tokens[self.ind]);
