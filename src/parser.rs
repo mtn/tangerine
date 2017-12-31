@@ -29,14 +29,14 @@ impl<'a> fmt::Display for ASTNode<'a> {
 impl<'a> ASTNode <'a> {
     pub fn reduce(&'a self, env: HashMap<String, &'a Box<ASTNode>>) -> ASTNode {
         match self {
-            &ASTNode::Abstraction { param: p, body: b } => {
+            &ASTNode::Abstraction { param: ref p, body: ref b } => {
                 let mut new = env.clone();
-                if let ASTNode::Atom(name) = *p {
+                if let ASTNode::Atom(name) = **p {
                     if new.contains_key(name) {
                         new.remove(name);
                     }
 
-                    if let ASTNode::Application { lhs: l, rhs: r } = *b {
+                    if let ASTNode::Application { lhs: ref l, rhs: ref r } = **b {
                         if r == p && !l.free_in(&*p) {
                             return l.reduce(new)
                         }
@@ -64,7 +64,7 @@ impl<'a> ASTNode <'a> {
             },
             &ASTNode::Atom (name) => {
                 match env.get(name) {
-                    Some(node) => ***node,
+                    Some(node) => **node.clone(),
                     None => self.clone(),
                 }
             },
@@ -74,16 +74,19 @@ impl<'a> ASTNode <'a> {
         }
     }
 
-    fn free_in (&'a self, atom: &'a ASTNode) -> bool {
+    fn free_in (&'a self, atom: &ASTNode) -> bool {
         match self {
-            &ASTNode::Abstraction { param: p, body: b } => {
-                *atom != *p && b.free_in(atom)
+            &ASTNode::Abstraction { param: ref p, body: ref b } => {
+                false
+                // *atom != *p && b.free_in(atom)
             },
-            &ASTNode::Application { lhs: l, rhs: r } => {
-                l.free_in(atom) || r.free_in(atom)
+            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
+                false
+                // l.free_in(atom) || r.free_in(atom)
             },
             &ASTNode::Atom (_) => {
-                self == atom
+                false
+                // self == atom
             },
             _ => false
         }
