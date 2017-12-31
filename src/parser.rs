@@ -27,7 +27,7 @@ impl<'a> fmt::Display for ASTNode<'a> {
 }
 
 impl<'a> ASTNode <'a> {
-    pub fn reduce(&'a self, env: HashMap<String, &'a Box<ASTNode>>) -> ASTNode {
+    pub fn reduce(&'a self, env: HashMap<String, Box<ASTNode<'a>>>) -> ASTNode {
         match self {
             &ASTNode::Abstraction { param: ref p, body: ref b } => {
                 let mut new = env.clone();
@@ -51,7 +51,7 @@ impl<'a> ASTNode <'a> {
                 if let ASTNode::Abstraction { param: ref p, body: ref b} = **l {
                     let mut new = env.clone();
                     if let ASTNode::Atom(name) = **p {
-                        new.insert(name.to_string(), &*r);
+                        new.insert(name.to_string(), r.clone());
                         return b.reduce(new)
                     }
                     panic!("Incorrectly structured Application");
@@ -64,7 +64,7 @@ impl<'a> ASTNode <'a> {
             },
             &ASTNode::Atom (name) => {
                 match env.get(name) {
-                    Some(node) => **node.clone(),
+                    Some(node) => *node.clone(),
                     None => self.clone(),
                 }
             },
