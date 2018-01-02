@@ -14,14 +14,12 @@ pub enum ASTNode {
 impl fmt::Display for ASTNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &ASTNode::Abstraction { param: ref p, body: ref b } => {
-                write!(f, "λ{}.{}", p, b)
-
-            },
-            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
-                write!(f, "({} {})", l, r)
-            },
-            &ASTNode::Atom(ref name) => write!(f, "{}", name),
+            &ASTNode::Abstraction { ref param, ref body } =>
+                write!(f, "λ{}.{}", param, body),
+            &ASTNode::Application { ref lhs, ref rhs } =>
+                write!(f, "({} {})", lhs, rhs),
+            &ASTNode::Atom(ref name) =>
+                write!(f, "{}", name),
             &ASTNode::Epsilon => write!(f, "ε"),
         }
     }
@@ -30,43 +28,48 @@ impl fmt::Display for ASTNode {
 impl ASTNode {
     pub fn reduce(&self, env: HashMap<String, ASTNode>) -> ASTNode {
         match self {
-            &ASTNode::Abstraction { param: ref p, body: ref b } => {
+            &ASTNode::Abstraction { ref param, ref body } => {
                 let mut new = env.clone();
-                if let ASTNode::Atom(ref name) = **p {
+                if let ASTNode::Atom(ref name) = **param {
                     if new.contains_key(name) {
                         new.remove(name);
                     }
 
-                    if let ASTNode::Application { lhs: ref l, rhs: ref r } = **b {
-                        if r == p && !l.free_in(&**p) {
-                            return l.reduce(new)
+                    if let ASTNode::Application { ref lhs, ref rhs } = **body {
+                        if rhs == param && !lhs.free_in(&**param) {
+                            return lhs.reduce(new)
                         }
                     }
                 } else {
                     panic!("Incorrectly structured Abstraction");
                 }
 
-                ASTNode::Abstraction { param: p.clone(), body: Box::new(b.reduce(new)) }
+                ASTNode::Abstraction {
+                    param: param.clone(),
+                    body: Box::new(body.reduce(new))
+                }
             },
-            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
-                if let ASTNode::Abstraction { param: ref p, body: ref b} = **l {
+            &ASTNode::Application { ref lhs, ref rhs } => {
+                if let ASTNode::Abstraction { ref param, ref body } = **lhs {
                     let mut new = env.clone();
-                    if let ASTNode::Atom(ref name) = **p {
-                        new.insert(name.clone(), *r.clone());
-                        return b.reduce(new)
+                    if let ASTNode::Atom(ref name) = **param {
+                        new.insert(name.clone(), *rhs.clone());
+                        return body.reduce(new)
                     }
                     panic!("Incorrectly structured Application");
                 }
 
                 ASTNode::Application {
-                    lhs: Box::new(l.reduce(env.clone())),
-                    rhs: Box::new(r.reduce(env.clone()))
+                    lhs: Box::new(lhs.reduce(env.clone())),
+                    rhs: Box::new(rhs.reduce(env.clone()))
                 }
             },
             &ASTNode::Atom (ref name) => {
                 match env.get(name) {
-                    Some(ref node) => (*node).clone(),
-                    None => self.clone(),
+                    Some(ref node) =>
+                        (*node).clone(),
+                    None =>
+                        self.clone(),
                 }
             },
             &ASTNode::Epsilon => {
@@ -77,15 +80,12 @@ impl ASTNode {
 
     fn free_in(&self, atom: &ASTNode) -> bool {
         match self {
-            &ASTNode::Abstraction { param: ref p, body: ref b } => {
-                *atom != **p && b.free_in(atom)
-            },
-            &ASTNode::Application { lhs: ref l, rhs: ref r } => {
-                l.free_in(atom) || r.free_in(atom)
-            },
-            &ASTNode::Atom (_) => {
-                self == atom
-            },
+            &ASTNode::Abstraction { ref param, ref body } =>
+                *atom != **param && body.free_in(atom),
+            &ASTNode::Application { ref lhs, ref rhs } =>
+                lhs.free_in(atom) || rhs.free_in(atom),
+            &ASTNode::Atom (_) =>
+                self == atom,
             _ => false
         }
     }
@@ -133,7 +133,8 @@ impl Parser {
                         rhs: Box::new(exp)
                     }
                 },
-                None => return lexpr
+                None =>
+                    return lexpr
             };
         }
     }
@@ -157,10 +158,13 @@ impl Parser {
 
     fn parse_bounded(&mut self) -> Option<ASTNode> {
         match self.tokens[self.ind] {
-            Token::Atom(_) => Some(self.parse_atom()),
-            Token::Lambda  => Some(self.parse_abstraction()),
-            Token::LParen  => Some(self.parse_parenthesized_expression()),
-            _              => None,
+            Token::Atom(_) =>
+                Some(self.parse_atom()),
+            Token::Lambda =>
+                Some(self.parse_abstraction()),
+            Token::LParen =>
+                Some(self.parse_parenthesized_expression()),
+            _ => None,
         }
     }
 
@@ -192,18 +196,21 @@ pub fn remove_epsilon(mut ast: ASTNode) -> ASTNode {
     };
 
     ast = match ast {
-        ASTNode::Application {lhs: ref l, rhs: ref r} => {
+        ASTNode::Application { ref lhs, ref rhs } => {
             ASTNode::Application {
-                lhs: Box::new(remove_epsilon(*l.clone())),
-                rhs: Box::new(remove_epsilon(*r.clone()))
+                lhs: Box::new(remove_epsilon(*lhs.clone())),
+                rhs: Box::new(remove_epsilon(*rhs.clone()))
             }
         },
         _ => ast
     };
 
     ast = match ast {
-        ASTNode::Abstraction { param: ref p, body: ref b } => {
-            ASTNode::Abstraction { param: p.clone(), body: Box::new(remove_epsilon(*b.clone())) }
+        ASTNode::Abstraction { ref param, ref body } => {
+            ASTNode::Abstraction {
+                param: param.clone(),
+                body: Box::new(remove_epsilon(*body.clone()))
+            }
         },
         _ => ast
     };
