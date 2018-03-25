@@ -49,15 +49,15 @@ fn run_repl() {
             Ok(inp) => println!("{}", evaluate(&inp)),
             Err(ReadlineError::Interrupted) => {
                 println!("Interrupted, goodbye!");
-                break
-            },
+                break;
+            }
             Err(ReadlineError::Eof) => {
                 println!("Goodbye!");
-                break
-            },
+                break;
+            }
             Err(err) => {
                 println!("Error: {:?}", err);
-                break
+                break;
             }
         }
     }
@@ -86,11 +86,13 @@ mod tests {
 
         // application combinator
         // ((λy.λx.(y x)) (λx.x x)) y -> y y
-        assert_eq!(evaluate("((λy.λx.(y x)) (λx.x x)) y"),
-                   ASTNode::Application {
-                       lhs: Box::new(ASTNode::Atom(String::from("y"))),
-                       rhs: Box::new(ASTNode::Atom(String::from("y")))
-                   });
+        assert_eq!(
+            evaluate("((λy.λx.(y x)) (λx.x x)) y"),
+            ASTNode::Application {
+                lhs: Box::new(ASTNode::Atom(String::from("y"))),
+                rhs: Box::new(ASTNode::Atom(String::from("y"))),
+            }
+        );
 
         // simple eta-reducable expression
         // λx.(y x) -> y
@@ -98,31 +100,39 @@ mod tests {
 
         // complex eta-reducable expression
         // (λx.(λx.y x) (λx.z x)) x -> y z
-        assert_eq!(evaluate("(λx.(λx.y x) (λx.z x)) x"),
-                   ASTNode::Application {
-                       lhs: Box::new(ASTNode::Atom(String::from("y"))),
-                       rhs: Box::new(ASTNode::Atom(String::from("z")))
-                   });
+        assert_eq!(
+            evaluate("(λx.(λx.y x) (λx.z x)) x"),
+            ASTNode::Application {
+                lhs: Box::new(ASTNode::Atom(String::from("y"))),
+                rhs: Box::new(ASTNode::Atom(String::from("z"))),
+            }
+        );
 
         // if-else combinator (5 beta-reductions)
         // (λp.λa.λb.p a b) (λa.λb. a) a b -> a
-        assert_eq!(evaluate("(λp.λa.λb.p a b) (λa.λb. a) a b"),
-                   ASTNode::Atom(String::from("a")));
+        assert_eq!(
+            evaluate("(λp.λa.λb.p a b) (λa.λb. a) a b"),
+            ASTNode::Atom(String::from("a"))
+        );
 
         // alpha-beta-eta combination
         // (λz.z (λx. w x)) y -> y w
-        assert_eq!(evaluate("(λz.z (λx. w x)) y"),
-                   ASTNode::Application {
-                       lhs: Box::new(ASTNode::Atom(String::from("y"))),
-                       rhs: Box::new(ASTNode::Atom(String::from("w")))
-                   });
+        assert_eq!(
+            evaluate("(λz.z (λx. w x)) y"),
+            ASTNode::Application {
+                lhs: Box::new(ASTNode::Atom(String::from("y"))),
+                rhs: Box::new(ASTNode::Atom(String::from("w"))),
+            }
+        );
 
         // possible name collision
         // (λx.(λx.y x) (λx.z x)) x -> w w
-        assert_eq!(evaluate("(λx.λx.(x x)) y w"),
-                   ASTNode::Application {
-                       lhs: Box::new(ASTNode::Atom(String::from("w"))),
-                       rhs: Box::new(ASTNode::Atom(String::from("w")))
-                   });
+        assert_eq!(
+            evaluate("(λx.λx.(x x)) y w"),
+            ASTNode::Application {
+                lhs: Box::new(ASTNode::Atom(String::from("w"))),
+                rhs: Box::new(ASTNode::Atom(String::from("w"))),
+            }
+        );
     }
 }

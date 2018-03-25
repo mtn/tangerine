@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Lambda,
@@ -18,7 +17,7 @@ impl Lexer {
     pub fn new(input: &str) -> Lexer {
         Lexer {
             input: input.chars().filter(|x| !x.is_whitespace()).collect(),
-            ind : 0,
+            ind: 0,
         }
     }
 
@@ -26,20 +25,20 @@ impl Lexer {
         self.ind += 1;
     }
 
-    fn get_token (&mut self) -> Option<Token> {
+    fn get_token(&mut self) -> Option<Token> {
         if self.ind >= self.input.len() {
-            return None
+            return None;
         }
 
         match self.input[self.ind] {
-            'λ'| '\\' => {
+            'λ' | '\\' => {
                 self.advance();
                 Some(Token::Lambda)
-            },
+            }
             '.' => {
                 self.advance();
                 Some(Token::Dot)
-            },
+            }
             '(' => {
                 self.advance();
                 Some(Token::LParen)
